@@ -88,6 +88,12 @@ void MainWindow::createLayout()
     numberOfActuatingMechanismsLineEdit->setStyleSheet("background-color: white; color: black");
     maximumNumberOfActuatingMechanismsLineEdit->setStyleSheet("background-color: white; color: black");
     tasksComboBox->setStyleSheet("background-color: white; color: black");
+    currentNumberOfActuatingMechanismsLabel->setFont(QFont(QString("Arial"),12,-1,true));
+    numberOfActuatingMechanismsLineEdit->setFont(QFont(QString("Arial"),12,-1,true));
+    maximumNumberOfActuatingMechanismsLabel->setFont(QFont(QString("Arial"),12,-1,true));
+    maximumNumberOfActuatingMechanismsLineEdit->setFont(QFont(QString("Arial"),12,-1,true));
+    currentTaskLabel->setFont(QFont(QString("Arial"),12,-1,true));
+    tasksComboBox->setFont(QFont(QString("Arial"),12,-1,true));
 
     mainWindowWidget->setLayout(mainWindowWidgetLayout);
     setCentralWidget(mainWindowWidget);

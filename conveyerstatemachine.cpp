@@ -18,48 +18,38 @@ ConveyerStateMachine::~ConveyerStateMachine()
 
 void ConveyerStateMachine::createStateMachine()
 {
-    QState *initialState = new QState(stateMachine.get());
-    QState *workingState = new QState();// выполнение операций каждого исполнительного механизма
-    QState *faultState = new QState(); // состояние отказа, в которое происходит переход после соответствующего сигнала от исполнительного механизма
-                                       // (сигнал аварии или сигнал обрыва связи)
-    QState *finalState = new QState(); // конечное состояние, в которое происходит переход после успешного завершения операций всех исполнительных механизмов
-    QState *resetState = new QState(); // состояение приостановки
+    QState *topLevelState = new QState(stateMachine.get());
 
-    stateMachine->addState(workingState);
-    stateMachine->addState(faultState);
-    stateMachine->addState(finalState);
-    stateMachine->addState(resetState);
+    QState *initialState = new QState(topLevelState);
+    QState *workingState = new QState(topLevelState);// выполнение операций каждого исполнительного механизма
+    QState *faultState = new QState(topLevelState); // состояние отказа, в которое происходит переход после соответствующего сигнала от исполнительного механизма
+                                                    // (сигнал аварии или сигнал обрыва связи)
+    QState *finalState = new QState(topLevelState); // конечное состояние, в которое происходит переход после успешного завершения операций всех исполнительных механизмов
+    QState *resetState = new QState(topLevelState); // состояение приостановки
 
     CommandTransition *transitionToWorkingState = new CommandTransition(QStringLiteral("jumpToWorkingState"));
     transitionToWorkingState->setTargetState(workingState);
-    // в рабочее состояние возможен переход из начального состояния, конечного состояния или после отказа
-    initialState->addTransition(transitionToWorkingState);
-    faultState->addTransition(transitionToWorkingState);
+    topLevelState->addTransition(transitionToWorkingState);
 
     CommandTransition *transitionToFaultState = new CommandTransition(QStringLiteral("jumpToFaultState"));
     transitionToFaultState->setTargetState(faultState);
-    workingState->addTransition(transitionToFaultState);
+    topLevelState->addTransition(transitionToFaultState);
 
     CommandTransition *transitionToFinalState = new CommandTransition(QStringLiteral("jumpToFinalState"));
     transitionToFinalState->setTargetState(finalState);
-    // завершиться можно только из рабочего состояния
-    workingState->addTransition(transitionToFinalState);
+    topLevelState->addTransition(transitionToFinalState);
 
     CommandTransition *transitionToInitialState = new CommandTransition(QStringLiteral("jumpToInitialState"));
     transitionToInitialState->setTargetState(initialState);
-    finalState->addTransition(transitionToInitialState);
-    resetState->addTransition(transitionToInitialState);
+    topLevelState->addTransition(transitionToInitialState);
 
     CommandTransition *transitionToResetState = new CommandTransition(QStringLiteral("jumpToResetState"));
     transitionToResetState->setTargetState(resetState);
-    finalState->addTransition(transitionToResetState);
-
-    // Из начального состояния производится переход в рабочее после
-    // сигнала о начале первого цикла
-    initialState->addTransition(this,SIGNAL(startNewCycle()),workingState);
+    topLevelState->addTransition(transitionToResetState);
 
     connect(initialState,&QState::entered,[&]()
     {
+        std::cout << "In initial state..." << std::endl;
         stateMachine->postEvent(new CommandEvent("jumpToWorkingState"));
     });
 
@@ -98,23 +88,21 @@ void ConveyerStateMachine::createStateMachine()
 
     connect(finalState,&QState::entered,[&]()
     {
-        qDebug() << "In final state...";
         emit updateConveyerState(std::make_tuple(cycles_counter,SYS::enum_status::DONE));
         cycles_counter++;
         if(!conveyer_is_active)
         {
-            std::cout << "jump to reset state" << std::endl;
             stateMachine->postEvent(new CommandEvent("jumpToResetState"));
         }
         else
         {
-            std::cout << "jump to initial state" << std::endl;
             stateMachine->postEvent(new CommandEvent("jumpToInitialState"));
         }
     });
 
-    stateMachine->setInitialState(initialState);
-    stateMachine->start();
+    topLevelState->setInitialState(initialState);
+    stateMachine->setInitialState(topLevelState);
+
 }
 
 
@@ -127,7 +115,10 @@ void ConveyerStateMachine::startWork()
     }
     else
     {
-        emit startNewCycle();
+        if(!stateMachine->isRunning())
+        {
+            stateMachine->start();
+        }
     }
 }
 
