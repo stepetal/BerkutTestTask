@@ -128,7 +128,7 @@ void ConveyerStateMachine::resumeWorkAfterFault()
     conveyer->resetConveyer();
     //создаем конвейер, в котором ошибок уже нет
     conveyer->createDefaultConveyer();
-    stateMachine->postEvent(new CommandEvent("jumpToWorkingState"));
+    stateMachine->postEvent(new CommandEvent("jumpToInitialState"));
 }
 
 void ConveyerStateMachine::resetConveyer()
